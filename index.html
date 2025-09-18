@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agenda Diaria — Admisión & Profesionales</title>
+<style>
+  :root{
+    --bg:#f7f9fb; --panel:#fff; --text:#111827; --muted:#6b7280; --primary:#2563eb;
+    --primary-600:#1d4ed8; --accent:#10b981; --warn:#f59e0b; --danger:#ef4444; --noacude:#9ca3af;
+    --border:#d1d5db; --table-head:#f3f4f6; --called:#fff7d6; --arrived:#dcfce7; --left:#fee2e2;
+  }
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  header{background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  .wrap{max-width:1300px;margin:0 auto;padding:12px 16px}
+  h1{font-size:1.35rem;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:0.95rem;margin:0 0 6px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto;align-items:center}
+  .group{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  label{font-size:0.9rem;color:var(--muted)}
+  input[type="date"],input[type="time"],select{padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;min-height:34px}
+  input[type="file"]{display:none}
+  .btn{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;min-height:32px; display:inline-flex; align-items:center; gap: 6px;}
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .btn.primary:hover{background:var(--primary-600)}
+  .btn.success{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.warn{background:var(--warn);color:#fff;border-color:var(--warn)}
+  .btn.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+  .btn.neutral{background:var(--noacude);color:#fff;border-color:var(--noacude)}
+  .btn.ghost{background:transparent}
+  .btn-icon svg { width: 16px; height: 16px; }
+  main{max-width:1300px;margin:16px auto;padding:0 16px 24px}
+  .panels{display:none}
+  .panels.active{display:block}
+  .info{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:8px 0 16px;color:var(--muted)}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:0.8rem;border:1px solid var(--border);background:#fff}
+  .pill.success{background:var(--arrived);border-color:#a7f3d0}
+  .pill.warn{background:var(--called);border-color:#fde68a}
+  .pill.danger{background:var(--danger);border-color:#f87171;color:white;}
+  .pill.gray{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
+  .section-title{font-weight:600;color:#374151;margin-right:6px}
+
+  .prof-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;margin:16px 0;overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+  .prof-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-bottom:1px solid var(--border);background:#fafafa}
+  .prof-head h2{font-size:1.05rem;margin:0}
+
+  table{width:100%;border-collapse:collapse;font-size:0.95rem;background:#fff;border:1px solid var(--border)}
+  thead th{padding:8px;background:var(--table-head);border:1px solid var(--border);text-align:left}
+  tbody td{padding:8px;border:1px solid var(--border);vertical-align:middle}
+  tbody tr.called{background:var(--called)}
+  tbody tr.arrived{background:var(--arrived)}
+  tbody tr.left{background:var(--left)}
+  tbody tr.noacude{background:#eef2f7}
+  .nowrap{white-space:nowrap}
+  .search{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .search input[type="search"]{flex:1 1 280px;min-width:220px;padding:8px 10px;border:1px solid var(--border);border-radius:8px}
+  td.notes-cell textarea{width:100%;min-height:36px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:6px}
+  td.actions .btn{margin-right:6px;margin-bottom:6px}
+
+  /* Pantalla inicial */
+  #landing{position:fixed;inset:0;background:linear-gradient(180deg,#f8fafc, #eef2f7);display:flex;align-items:center;justify-content:center;z-index:9999}
+  .landing-card{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.08);padding:28px;max-width:520px;width:92%}
+  .landing-card h1{margin:0 0 8px;font-size:1.5rem}
+  .landing-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .landing-actions .btn{flex:1 1 220px;font-size:1.05rem;padding:12px}
+</style>
+</head>
+<body>
+<div id="landing">
+  <div class="landing-card">
+    <h1>Agenda diaria</h1>
+    <p class="sub">Selecciona el panel para comenzar</p>
+    <div class="landing-actions">
+      <button id="go-adm" class="btn primary">Admisión</button>
+      <button id="go-pro" class="btn">Profesional</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="wrap">
+    <h1>Agenda diaria de pacientes</h1>
+    <p class="sub">Sincronización con SharePoint — Selecciona fecha y filtros</p>
+    <div class="bar">
+      <div class="controls">
+        <div class="group">
+          <span id="sync-status" class="pill gray">Sincronización: pendiente</span>
+        </div>
+        <div class="group">
+          <button id="btn-sync-now" class="btn ghost btn-icon" title="Sincronizar ahora">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201-4.46 5.5 5.5 0 011.026-1.117l.844.844A4.002 4.002 0 006.5 10a4 4 0 005.13 3.86l.664.664a5.5 5.5 0 01-3.987.96z" clip-rule="evenodd" /><path fill-rule="evenodd" d="M4.688 8.576a5.5 5.5 0 019.201 4.46 5.5 5.5 0 01-1.026 1.117l-.844-.844A4.002 4.002 0 0013.5 10a4 4 0 00-5.13-3.86l-.664-.664a5.5 5.5 0 013.987-.96z" clip-rule="evenodd" /></svg>
+            Sincronizar ahora
+          </button>
+        </div>
+        <div class="group">
+          <label for="fecha">Fecha</label>
+          <input id="fecha" type="date" />
+        </div>
+        <div class="group">
+          <button id="btn-export-csv" class="btn">Exportar CSV</button>
+          <button id="btn-export-xls" class="btn">Exportar Excel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="panel-adm" class="panels" aria-labelledby="tab-adm">
+    <div class="info">
+      <div>
+        <span id="info-fecha-adm" class="pill gray">Fecha: —</span>
+        <span id="info-registros-adm" class="pill gray">Registros: 0</span>
+      </div>
+      <div class="search">
+        <span class="section-title">Búsqueda y filtros</span>
+        <input id="search-adm" type="search" placeholder="NHC, paciente o profesional…" />
+        <select id="filter-prof-adm"><option value="__ALL__">Todos</option></select>
+        <select id="filter-estado-adm">
+          <option value="__ALL__">Todos</option>
+          <option value="llego">Llegó</option>
+          <option value="llamado">Llamado</option>
+          <option value="salida">Salida</option>
+          <option value="noacude">No acude</option>
+          <option value="pendiente">Pendiente</option>
+        </select>
+        <input type="time" id="filter-hora-desde-adm" />
+        <input type="time" id="filter-hora-hasta-adm" />
+        <button id="btn-limpiar-filtros-adm" class="btn ghost">Limpiar</button>
+      </div>
+    </div>
+    <div class="info">
+      <div class="search">
+        <span class="section-title">Carga y estado</span>
+        <input id="file-csv" type="file" accept=".csv,text/csv" />
+        <label for="file-csv" class="btn">Cargar CSV de agenda…</label>
+        <button id="btn-cargar-historico" class="btn" title="Busca el CSV para la fecha seleccionada en la biblioteca de SharePoint">Cargar CSV del día</button>
+        <input id="file-estado" type="file" accept=".json,application/json" />
+        <label for="file-estado" class="btn">Importar estado…</label>
+        <button id="btn-guardar-estado" class="btn">Exportar estado</button>
+      </div>
+    </div>
+    <div id="listado-adm"></div>
+  </section>
+
+  <section id="panel-pro" class="panels" aria-labelledby="tab-pro">
+    <div class="info">
+      <div>
+        <span id="info-fecha-pro" class="pill gray">Fecha: —</span>
+        <span id="info-registros-pro" class="pill gray">Registros: 0</span>
+      </div>
+      <div class="search">
+        <span class="section-title">Búsqueda y filtros</span>
+        <select id="select-prof-pro"></select>
+        <select id="filter-estado-pro">
+          <option value="__ALL__">Todos</option>
+          <option value="llego">Llegó</option>
+          <option value="llamado">Llamado</option>
+          <option value="salida">Salida</option>
+          <option value="noacude">No acude</option>
+          <option value="pendiente">Pendiente</option>
+        </select>
+        <input id="search-pro" type="search" placeholder="NHC o paciente…" />
+        <input type="time" id="filter-hora-desde-pro" />
+        <input type="time" id="filter-hora-hasta-pro" />
+        <button id="btn-limpiar-filtros-pro" class="btn ghost">Limpiar</button>
+      </div>
+    </div>
+    <div id="listado-pro"></div>
+  </section>
+</main>
+
+<script>
+/* ==================================================================
+   CONFIGURACIÓN PARA SHAREPOINT - ¡IMPORTANTE: EDITAR ESTOS VALORES!
+   ================================================================== */
+const SP_CONFIG = {
+  // URL completa de tu sitio de SharePoint.
+  // Ejemplo: "https://tuempresa.sharepoint.com/sites/TuSitio"
+  siteUrl: "https://ibsalut.sharepoint.com/sites/SitioPedroJoseVargasMolano",
+
+  // Ruta relativa de la biblioteca de documentos donde se guardarán los ficheros de estado.
+  // Ejemplo: "Documentos Compartidos/Agendas"
+  libraryPath: "Agendas/Agenda Diaria",
+  
+  // Ruta relativa de la biblioteca donde se guardan los CSV históricos.
+  // Puede ser la misma que 'libraryPath'. Ejemplo: "Documentos Compartidos/Agendas/Historico"
+  historicCSVPath: "Agendas/Agenda Diaria/Historico"
+};
+
+/* ============ Utilidades ============ */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const pad2 = n => String(n).padStart(2, '0');
+function todayLocalISO() { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function toDDMMYYYY(dateStrISO) { const [y, m, d] = dateStrISO.split('-'); return `${d}_${m}_${y}`; }
+function parseTimeToMinutes(hhmm) { if (!hhmm) return null; const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim()); if (!m) return null; return (+m[1]) * 60 + (+m[2]); }
+function norm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+function slug(s) { return norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+function splitCSVLine(line, delimiter = ',') { const res = []; let cur = ''; let inQ = false; for (let i = 0; i < line.length; i++) { const ch = line[i]; if (ch === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++; } else { inQ = !inQ; } } else if (ch === delimiter && !inQ) { res.push(cur); cur = ''; } else { cur += ch; } } res.push(cur); return res.map(t => t.trim()); }
+
+/* =======================================
+   Módulo de Sincronización con SharePoint
+   ======================================= */
+const SharePointSync = {
+    _requestDigest: null,
+    _etag: null,
+    _lastSyncTime: 0,
+    
+    async getRequestDigest() {
+        if (this._requestDigest) return this._requestDigest;
+        const res = await fetch(`${SP_CONFIG.siteUrl}/_api/contextinfo`, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json;odata=verbose' }
+        });
+        if (!res.ok) throw new Error('No se pudo obtener el Request Digest de SharePoint.');
+        const data = await res.json();
+        this._requestDigest = data.d.GetContextWebInformation.FormDigestValue;
+        setTimeout(() => this._requestDigest = null, 1700 * 1000); // Expira en ~30 mins
+        return this._requestDigest;
+    },
+
+    getStateUrl(dateISO) {
+        const fileName = `estado_${toDDMMYYYY(dateISO)}.json`;
+        return `${SP_CONFIG.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_CONFIG.libraryPath}')/Files('${fileName}')`;
+    },
+
+    async loadState(dateISO) {
+        setSyncStatus('syncing');
+        const url = this.getStateUrl(dateISO) + '/$value';
+        try {
+            const metaRes = await fetch(this.getStateUrl(dateISO), {
+                headers: { 'Accept': 'application/json;odata=verbose' }
+            });
+            if (metaRes.status === 404) { // No existe, es un día nuevo
+                this._etag = null;
+                setSyncStatus('ok', 'Sincronizado (nuevo día)');
+                return {};
+            }
+            const meta = await metaRes.json();
+            this._etag = meta.d.ETag;
+
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const state = await res.json();
+            setSyncStatus('ok');
+            this._lastSyncTime = Date.now();
+            return state || {};
+        } catch (e) {
+            if (e.message.includes('404')) {
+                setSyncStatus('ok', 'Sincronizado (nuevo día)');
+                return {};
+            }
+            setSyncStatus('error', 'Error al cargar');
+            console.error("Error cargando estado:", e);
+            return loadStateLocal(dateISO); // Fallback a local
+        }
+    },
+
+    async updateState(dateISO, patch) {
+        setSyncStatus('syncing', 'Guardando...');
+        try {
+            const digest = await this.getRequestDigest();
+            
+            // 1. Obtener estado actual para evitar race conditions
+            let currentState = {};
+            let currentEtag = "*"; // Usar "*" si el fichero no existe
+            try {
+                const metaRes = await fetch(this.getStateUrl(dateISO), { headers: { 'Accept': 'application/json;odata=verbose' } });
+                if (metaRes.ok) {
+                    const meta = await metaRes.json();
+                    currentEtag = meta.d.ETag;
+                    const stateRes = await fetch(this.getStateUrl(dateISO) + '/$value');
+                    currentState = await stateRes.json();
+                }
+            } catch (e) { /* El fichero no existe, se creará */ }
+
+            // 2. Aplicar el patch
+            const newState = { ...currentState, ...patch };
+
+            // 3. Guardar el fichero
+            const url = this.getStateUrl(dateISO).replace(/'/g, "%27") + `/$value`;
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-RequestDigest': digest,
+                    'Content-Type': 'application/json;odata=verbose',
+                    'X-HTTP-Method': 'PUT',
+                    'If-Match': currentEtag 
+                },
+                body: JSON.stringify(newState)
+            });
+
+            if (!res.ok) {
+                if(res.status === 412) { // Precondition Failed - ETag mismatch
+                   alert("Alguien más ha modificado los datos. La vista se recargará para obtener la última versión.");
+                   await fullReload();
+                } else {
+                    throw new Error(`Error al guardar: ${res.statusText}`);
+                }
+                return;
+            }
+            
+            this._etag = res.headers.get('ETag');
+            app.state = newState;
+            saveStateLocal(dateISO, app.state);
+            setSyncStatus('ok');
+            rerender();
+
+        } catch (e) {
+            setSyncStatus('error', 'Error al guardar');
+            console.error("Error guardando estado:", e);
+            // Fallback a local si falla el guardado remoto
+            app.state = { ...app.state, ...patch };
+            saveStateLocal(dateISO, app.state);
+            rerender();
+        }
+    }
+};
+
+/* Parser específico diariohuse */
+function parseAgendaCSV_diarioHuse(text){ const out=[]; const lines=text.split(/\r?\n/); let currentFac=null; let detectedDateISO=null; for(const rawLine of lines){ if(!rawLine||!rawLine.trim()) continue; if(/fecha\s*:/i.test(rawLine)){ const m=rawLine.match(/(\d{2})\/(\d{2})\/(\d{4})/); if(m){ detectedDateISO=`${m[3]}-${m[2]}-${m[1]}`; } }
+if(/facultativo\s*:/i.test(rawLine)){ const cols=splitCSVLine(rawLine, ','); let idx=cols.findIndex(c=>/facultativo\s*:/i.test(c)); let name=null; if(idx>=0){ const same=cols[idx].split(':').slice(1).join(':').trim(); if(same){ name=same.replace(/^"+|"+$/g,''); } if(!name){ const next=cols.slice(idx+1).find(t=>t&&t.trim()); if(next) name=next.replace(/^"+|"+$/g,''); } } currentFac=(name||'').trim(); continue; }
+if(/^\s*hora\b/i.test(rawLine)) continue; const cols=splitCSVLine(rawLine, ','); const firstIdx=cols.findIndex(t=>(t||'').trim()); if(firstIdx<0) continue; const first=(cols[firstIdx]||'').trim(); if(!/^\d{1,2}:\d{2}$/.test(first)) continue; const hora=first; let condicion=''; for(let j=firstIdx+1;j<Math.min(cols.length, firstIdx+8);j++){ const t=(cols[j]||'').trim(); if(t && /[A-Za-zÁÉÍÓÚÜÑ]/i.test(t) && !/^\d+$/.test(t)){ condicion=t; break; } } let nhc='', nhcIndex=-1; for(let j=firstIdx+1;j<cols.length;j++){ const t=(cols[j]||'').trim(); if(/^\d{6,}[A-Z0-9]*$/i.test(t)){ nhc=t; nhcIndex=j; break; } } let paciente='', pacIndex=-1; for(let j=(nhcIndex>=0?nhcIndex+1:firstIdx+1); j<cols.length; j++){ let t=(cols[j]||'').trim(); if(!t) continue; t=t.replace(/^"(.*)"$/,'$1'); if(/[A-Za-zÁÉÍÓÚÜÑ]/.test(t)){ paciente=t; pacIndex=j; break; } } let notas=''; if(pacIndex>=0){ const rest=cols.slice(pacIndex+1).map(x=>(x||'').trim()).filter(x=>x && x!=='/' && x!=='—' && x!=='.'); notas=rest.join(' ').replace(/\s+/g,' ').trim(); }
+out.push({ facultativo: currentFac||'(Sin facultativo)', hora, condicion, nhc, paciente, notas }); }
+return { registros: out, detectedDateISO }; }
+
+/* Estado y sincronización local (fallback) */
+function stateKey(dateISO) { return `estado_offline_${toDDMMYYYY(dateISO)}`; }
+function loadStateLocal(dateISO) { try { const raw = localStorage.getItem(stateKey(dateISO)); return raw ? JSON.parse(raw) : {}; } catch (e) { return {}; } }
+function saveStateLocal(dateISO, state) { try { localStorage.setItem(stateKey(dateISO), JSON.stringify(state)); } catch (_) { } }
+function setSyncStatus(status, text) {
+    const el = $('#sync-status');
+    const now = new Date();
+    const time = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+    if (status === 'syncing') { el.textContent = text || 'Sincronizando...'; el.className = 'pill warn'; }
+    else if (status === 'ok') { el.textContent = text || `Sincronizado ${time}`; el.className = 'pill success'; }
+    else if (status === 'error') { el.textContent = text || `Error de conexión ${time}`; el.className = 'pill danger'; }
+    else { el.textContent = text || 'Sincronización: pendiente'; el.className = 'pill gray'; }
+}
+async function pushUpdate(patch) {
+    // Primero, actualiza el estado local para una respuesta de UI instantánea
+    const prevState = { ...app.state };
+    app.state = { ...app.state, ...patch };
+    saveStateLocal(app.dateISO, app.state);
+    rerender();
+    // Luego, envía la actualización a SharePoint
+    await SharePointSync.updateState(app.dateISO, patch).catch(err => {
+        // Si falla, revertimos al estado anterior y mostramos error
+        app.state = prevState;
+        saveStateLocal(app.dateISO, app.state);
+        rerender();
+    });
+}
+
+/* App */
+const app = { dateISO: todayLocalISO(), registros: [], porFac: new Map(), profesionales: [], state: {} };
+function groupByProfesional() { const map = new Map(); for (const r of app.registros) { const fac = (r.facultativo || '(Sin facultativo)').trim(); if (!map.has(fac)) map.set(fac, []); map.get(fac).push(r); } for (const [fac, list] of map.entries()) { list.sort((a, b) => { const ta = (parseTimeToMinutes(a.hora) || 0), tb = (parseTimeToMinutes(b.hora) || 0); return ta - tb || (a.nhc || '').localeCompare(b.nhc || '', 'es'); }); } app.porFac = map; app.profesionales = Array.from(map.keys()).sort((a, b) => a.localeCompare(b, 'es')); }
+function refreshInfoBadges() { $('#info-fecha-adm').textContent = `Fecha: ${toDDMMYYYY(app.dateISO).replace(/_/g, '/')}`; $('#info-fecha-pro').textContent = `Fecha: ${toDDMMYYYY(app.dateISO).replace(/_/g, '/')}`; $('#info-registros-adm').textContent = `Registros: ${app.registros.length}`; $('#info-registros-pro').textContent = `Registros: ${app.registros.length}`; }
+function fillProfesionalFilters() { const comboAdm = $('#filter-prof-adm'); const comboPro = $('#select-prof-pro'); comboAdm.innerHTML = `<option value="__ALL__">Todos</option>`; comboPro.innerHTML = ''; for (const fac of app.profesionales) { const o1 = document.createElement('option'); o1.value = fac; o1.textContent = fac; comboAdm.appendChild(o1); const o2 = document.createElement('option'); o2.value = fac; o2.textContent = fac; comboPro.appendChild(o2); } }
+function matchesSearch(rec, term) { if (!term) return true; const t = norm(term); const hay = `${norm(rec.nhc)} ${norm(rec.paciente)} ${norm(rec.facultativo)}`; return t.split(/\s+/).every(tok => hay.includes(tok)); }
+function matchesEstado(st, filtro) { if (!filtro || filtro === '__ALL__') return true; const llego = !!(st.llegoAt || st.llego); const llamado = !!st.llamadoAt; const salida = !!st.salidaAt; const noacude = !!st.noAcudeAt;
+    if (filtro === 'llego') return llego && !salida && !noacude; if (filtro === 'llamado') return llamado; if (filtro === 'salida') return salida; if (filtro === 'noacude') return noacude; if (filtro === 'pendiente') return !(llego || llamado || salida || noacude); return true;
+}
+function recordMatchesFilters(rec, panel) { const desde = parseTimeToMinutes((panel === 'adm' ? $('#filter-hora-desde-adm') : $('#filter-hora-desde-pro')).value || '00:00'); const hasta = parseTimeToMinutes((panel === 'adm' ? $('#filter-hora-hasta-adm') : $('#filter-hora-hasta-pro')).value || '23:59'); const t = parseTimeToMinutes(rec.hora || '') ?? -1; if (t >= 0 && (t < desde || t > hasta)) return false; const q = (panel === 'adm' ? $('#search-adm') : $('#search-pro')).value; if (!matchesSearch(rec, q)) return false; const st = (app.state[makeItemId(app.dateISO, rec)] || {}); const filtroEstado = (panel === 'adm' ? $('#filter-estado-adm').value : $('#filter-estado-pro').value); if (!matchesEstado(st, filtroEstado)) return false; if (panel === 'adm') { const facSel = $('#filter-prof-adm').value; if (facSel && facSel !== '__ALL__') { if ((rec.facultativo || '(Sin facultativo)').trim() !== facSel) return false; } } else { const facSel = $('#select-prof-pro').value; if (facSel && (rec.facultativo || '(Sin facultativo)').trim() !== facSel) return false; } return true; }
+function getStateFor(rec) { const id = makeItemId(app.dateISO, rec); const st = app.state[id] || {}; if (st.llego && !st.llegoAt) st.llegoAt = '✔'; return { id, st }; }
+function makeItemId(dateISO, rec) { return [toDDMMYYYY(dateISO), slug(rec.facultativo || ''), slug(rec.hora || ''), slug(rec.nhc || ''), slug(rec.paciente || '')].filter(Boolean).join('__'); }
+
+/* Botones y acciones */
+function makeActionsButtons(id, st, forAdmissionPanel = false) {
+    const frag = document.createDocumentFragment();
+    const llego = !!(st.llegoAt || st.llego);
+
+    // Botón de Llegada (solo para Admisión, ahora dentro de Acciones)
+    if(forAdmissionPanel) {
+        const btnLlegada = document.createElement('button');
+        btnLlegada.className = 'btn ' + (llego ? 'success' : 'primary');
+        btnLlegada.textContent = llego ? (st.llegoAt && st.llegoAt !== '✔' ? `Llegó ${st.llegoAt}` : 'Llegó') : 'Llegó';
+        btnLlegada.addEventListener('click', () => { const now = new Date(); const hhmm = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`; const curr = app.state[id] || {}; const on = !!(curr.llegoAt || curr.llego); const patch = {}; patch[id] = { ...curr, llegoAt: on ? null : hhmm, llego: undefined }; pushUpdate(patch); });
+        frag.appendChild(btnLlegada);
+    }
+
+    // Botón Llamar
+    const btnCall = document.createElement('button');
+    btnCall.className = 'btn ' + (st.llamadoAt ? 'warn' : 'primary');
+    btnCall.textContent = st.llamadoAt ? `Llamado ${st.llamadoAt}` : 'Llamar';
+    btnCall.addEventListener('click', () => { const now = new Date(); const hhmm = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`; const curr = app.state[id] || {}; const patch = {}; patch[id] = { ...curr, llamadoAt: curr.llamadoAt ? null : hhmm }; pushUpdate(patch); });
+    frag.appendChild(btnCall);
+
+    // Botón Salida
+    const btnSalida = document.createElement('button');
+    btnSalida.className = 'btn ' + (st.salidaAt ? 'danger' : 'ghost');
+    btnSalida.textContent = st.salidaAt ? `Salida ${st.salidaAt}` : 'Salida';
+    btnSalida.addEventListener('click', () => { const now = new Date(); const hhmm = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`; const curr = app.state[id] || {}; const patch = {}; patch[id] = { ...curr, salidaAt: curr.salidaAt ? null : hhmm }; pushUpdate(patch); });
+    frag.appendChild(btnSalida);
+
+    // Botón No acude
+    const btnNA = document.createElement('button');
+    btnNA.className = 'btn ' + (st.noAcudeAt ? 'neutral' : 'ghost');
+    btnNA.textContent = st.noAcudeAt ? `No acude ${st.noAcudeAt}` : 'No acude';
+    btnNA.addEventListener('click', () => { const now = new Date(); const hhmm = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`; const curr = app.state[id] || {}; const patch = {}; patch[id] = { ...curr, noAcudeAt: curr.noAcudeAt ? null : hhmm }; pushUpdate(patch); });
+    frag.appendChild(btnNA);
+    
+    return frag;
+}
+
+/* Filas de tablas */
+function makeRowAdmission(rec) {
+    const { id, st } = getStateFor(rec);
+    const llego = !!(st.llegoAt || st.llego);
+    const tr = document.createElement('tr');
+    if (st.llamadoAt) tr.classList.add('called');
+    if (llego) tr.classList.add('arrived');
+    if (st.salidaAt) tr.classList.add('left');
+    if (st.noAcudeAt) tr.classList.add('noacude');
+    
+    const tdHora = Object.assign(document.createElement('td'), { textContent: rec.hora || '', className: 'nowrap' });
+    const tdCond = Object.assign(document.createElement('td'), { textContent: rec.condicion || '' });
+    const tdNHC = Object.assign(document.createElement('td'), { textContent: rec.nhc || '', className: 'nowrap' });
+    const tdPac = Object.assign(document.createElement('td'), { textContent: rec.paciente || '' });
+    const tdPro = Object.assign(document.createElement('td'), { textContent: rec.facultativo || '' });
+    
+    const tdNotas = document.createElement('td');
+    tdNotas.className = 'notes-cell';
+    const ta = document.createElement('textarea');
+    ta.value = (st.notas ?? rec.notas ?? '').trim();
+    ta.placeholder = 'Anotaciones…';
+    let debounce;
+    ta.addEventListener('input', () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+            const curr = app.state[id] || {}; const patch = {}; patch[id] = { ...curr, notas: ta.value }; pushUpdate(patch);
+        }, 500);
+    });
+    tdNotas.appendChild(ta);
+
+    const tdAcc = document.createElement('td');
+    tdAcc.className = 'actions';
+    tdAcc.appendChild(makeActionsButtons(id, st, true)); // true para panel de Admisión
+
+    const tdEstado = document.createElement('td');
+    const estado = [];
+    if (llego) estado.push(st.llegoAt && st.llegoAt !== '✔' ? `Llegó ${st.llegoAt}` : 'Llegó');
+    if (st.llamadoAt) estado.push(`Llamado ${st.llamadoAt}`);
+    if (st.salidaAt) estado.push(`Salida ${st.salidaAt}`);
+    if (st.noAcudeAt) estado.push(`No acude ${st.noAcudeAt}`);
+    tdEstado.textContent = estado.join(' · ') || '—';
+    
+    tr.append(tdHora, tdCond, tdNHC, tdPac, tdPro, tdNotas, tdAcc, tdEstado);
+    return tr;
+}
+
+function makeRowProfessional(rec){
+  const {id, st}=getStateFor(rec); const llego=!!(st.llegoAt||st.llego); const tr=document.createElement('tr'); if(st.llamadoAt) tr.classList.add('called'); if(llego) tr.classList.add('arrived'); if(st.salidaAt) tr.classList.add('left'); if(st.noAcudeAt) tr.classList.add('noacude');
+  const tdHora=Object.assign(document.createElement('td'),{textContent:rec.hora||'', className:'nowrap'});
+  const tdCond=Object.assign(document.createElement('td'),{textContent:rec.condicion||''});
+  const tdNHC=Object.assign(document.createElement('td'),{textContent:rec.nhc||'', className:'nowrap'});
+  const tdPac=Object.assign(document.createElement('td'),{textContent:rec.paciente||''});
+  const tdNotas=Object.assign(document.createElement('td'),{textContent:(st.notas ?? rec.notas ?? '')});
+  const tdLlegada=document.createElement('td'); const badge=document.createElement('span'); badge.className='pill ' + (llego?'success':'gray'); badge.textContent=llego ? (st.llegoAt && st.llegoAt!=='✔'?`Llegó ${st.llegoAt}`:'Llegó') : 'Pendiente'; tdLlegada.appendChild(badge);
+  const tdAcc=document.createElement('td'); tdAcc.className='actions'; tdAcc.appendChild(makeActionsButtons(id, st, false));
+  const tdEstado=document.createElement('td'); const estado=[]; if(llego) estado.push(st.llegoAt && st.llegoAt!=='✔'?`Llegó ${st.llegoAt}`:'Llegó'); if(st.llamadoAt) estado.push(`Llamado ${st.llamadoAt}`); if(st.salidaAt) estado.push(`Salida ${st.salidaAt}`); if(st.noAcudeAt) estado.push(`No acude ${st.noAcudeAt}`); tdEstado.textContent=estado.join(' · ')||'—';
+  tr.append(tdHora, tdCond, tdNHC, tdPac, tdNotas, tdLlegada, tdAcc, tdEstado); return tr;
+}
+
+/* Renderizado de vistas */
+function renderAdmission(){
+  const host=$('#listado-adm'); host.innerHTML='';
+  const all = app.registros.slice().sort((a,b)=> (parseTimeToMinutes(a.hora)||0)-(parseTimeToMinutes(b.hora)||0) );
+  const list = all.filter(r=>recordMatchesFilters(r,'adm'));
+  const card=document.createElement('div'); card.className='prof-card';
+  const head=document.createElement('div'); head.className='prof-head'; head.innerHTML = `<h2>Listado del día</h2><div class="sub">Total: ${all.length} · Filtrados: ${list.length}</div>`;
+  const tbl=document.createElement('table'); const thead=document.createElement('thead'); thead.innerHTML=`<tr>
+    <th>Hora</th><th>Condición</th><th>NHC</th><th>Paciente</th><th>Profesional</th><th>Notas</th>
+    <th>Acciones</th><th>Estado</th></tr>`; // Columna "Llegó" eliminada
+  const tbody=document.createElement('tbody'); list.forEach(rec=>tbody.appendChild(makeRowAdmission(rec))); tbl.append(thead,tbody); card.append(head,tbl); host.appendChild(card);
+  if(!tbody.children.length){ const empty=document.createElement('div'); empty.className='prof-card'; empty.innerHTML=`<div class="prof-head"><h2>Sin resultados</h2><div class="sub">Ajusta filtros.</div></div>`; host.appendChild(empty);}
+}
+
+function renderProfessional(){
+  const host=$('#listado-pro'); host.innerHTML=''; const fac=$('#select-prof-pro').value || app.profesionales[0]; if(!fac){ host.innerHTML=`<div class="prof-card"><div class="prof-head"><h2>Selecciona un profesional</h2></div></div>`; return; }
+  const full=app.porFac.get(fac)||[]; const list=full.filter(r=>recordMatchesFilters(r,'pro'));
+  const card=document.createElement('div'); card.className='prof-card'; const head=document.createElement('div'); head.className='prof-head'; head.innerHTML = `<h2>${fac}</h2><div class="sub">Total: ${full.length} · Filtrados: ${list.length}</div>`;
+  const tbl=document.createElement('table'); const thead=document.createElement('thead'); thead.innerHTML=`<tr>
+    <th>Hora</th><th>Condición</th><th>NHC</th><th>Paciente</th><th>Notas</th>
+    <th>Llegada</th><th>Acción</th><th>Estado</th></tr>`; const tbody=document.createElement('tbody'); list.forEach(rec=>tbody.appendChild(makeRowProfessional(rec))); tbl.append(thead,tbody); card.append(head,tbl);
+  if(!tbody.children.length){ const empty=document.createElement('div'); empty.className='prof-card'; empty.innerHTML=`<div class=\"prof-head\"><h2>Sin resultados</h2><div class=\"sub\">No hay pacientes en el rango/criterio.</div></div>`; host.appendChild(empty);}
+}
+function rerender() { refreshInfoBadges(); if ($('#panel-adm').classList.contains('active')) renderAdmission(); if ($('#panel-pro').classList.contains('active')) renderProfessional(); }
+
+/* Carga de ficheros CSV */
+async function loadCSVFromURL(url) { const res = await fetch(url, { cache: 'no-store' }); if (!res.ok) throw new Error(`No se pudo cargar: ${url} (${res.status})`); return await res.text(); }
+function loadCSVFromFile(file) { return new Promise((resolve, reject) => { const fr = new FileReader(); fr.onload = () => resolve(fr.result); fr.onerror = reject; fr.readAsText(file, 'utf-8'); }); }
+function setAgendaFromText(text) { const parsed = parseAgendaCSV_diarioHuse(text); app.registros = parsed.registros || []; if (parsed.detectedDateISO) { app.dateISO = parsed.detectedDateISO; $('#fecha').value = app.dateISO; } groupByProfesional(); fillProfesionalFilters(); rerender(); }
+async function tryLoadHistoricCSVForDate(iso) {
+    const ddmmyyyy = toDDMMYYYY(iso);
+    const fileName = `diariohuse_${ddmmyyyy}.csv`;
+    const url = `${SP_CONFIG.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${SP_CONFIG.historicCSVPath}')/Files('${fileName}')/$value`;
+    try {
+        const text = await loadCSVFromURL(url);
+        setAgendaFromText(text);
+    } catch (err) {
+        console.warn('No se pudo cargar el CSV histórico del día desde SharePoint.', err);
+        // Limpiar registros si no se encuentra CSV para el día seleccionado
+        app.registros = [];
+        groupByProfesional();
+        fillProfesionalFilters();
+        rerender();
+    }
+}
+
+/* Exportaciones */
+function collectRows(){ return app.registros.map(rec=>{ const id=makeItemId(app.dateISO, rec); const st=app.state[id]||{}; return { Fecha: app.dateISO, Hora: rec.hora||'', NHC: rec.nhc||'', Paciente: rec.paciente||'', Profesional: rec.facultativo||'', Condicion: rec.condicion||'', Llego: st.llegoAt||'', Llamado: st.llamadoAt||'', Salida: st.salidaAt||'', NoAcude: st.noAcudeAt||'', Notas: (st.notas??rec.notas??'') }; }); }
+function download(filename, blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),3000); a.remove(); }
+function exportCSV(){ const rows=collectRows(); const header=Object.keys(rows[0]||{}); const csv=[header.join(';')].concat(rows.map(r=>header.map(k=>`"${String(r[k]??'').replace(/"/g,'""')}"`).join(';'))).join('\n'); download(`informe_${toDDMMYYYY(app.dateISO)}.csv`, new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv],{type:'text/csv;charset=utf-8'})); }
+function exportExcelXML(){ const rows=collectRows(); const keys=Object.keys(rows[0]||{}); const esc=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); const rowXML = r=>`<Row>`+keys.map(k=>`<Cell><Data ss:Type="String">${esc(r[k])}</Data></Cell>`).join('')+`</Row>`; const xml=`<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n<Worksheet ss:Name="Informe"><Table>${rowXML(keys.reduce((a,k)=>{a[k]=k;return a;},{}))}${rows.map(rowXML).join('')}</Table></Worksheet></Workbook>`; download(`informe_${toDDMMYYYY(app.dateISO)}.xls`, new Blob([xml],{type:'application/vnd.ms-excel'})); }
+
+/* Navegación y Arranque */
+function showPanel(which) { $('#landing').style.display = 'none'; if (which === 'adm') { $('#panel-adm').classList.add('active'); $('#panel-pro').classList.remove('active'); } else { $('#panel-pro').classList.add('active'); $('#panel-adm').classList.remove('active'); } rerender(); }
+async function fullReload() {
+    const iso = app.dateISO;
+    app.state = await SharePointSync.loadState(iso);
+    saveStateLocal(iso, app.state);
+    await tryLoadHistoricCSVForDate(iso);
+    rerender();
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if(!SP_CONFIG.siteUrl || SP_CONFIG.siteUrl.includes("tuempresa.sharepoint.com")) {
+      alert("¡ATENCIÓN! Debes configurar las URLs de SharePoint en el fichero index.html (busca SP_CONFIG) para que la aplicación funcione correctamente.");
+    }
+
+    $('#fecha').value = app.dateISO;
+    await fullReload();
+    
+    // Auto-sincronización periódica
+    setInterval(async () => {
+        // Solo sincroniza si el ETag ha cambiado para ahorrar peticiones
+        const metaRes = await fetch(SharePointSync.getStateUrl(app.dateISO), {
+            headers: { 'Accept': 'application/json;odata=verbose', 'Cache-Control': 'no-cache' }
+        });
+        if (metaRes.ok) {
+            const meta = await metaRes.json();
+            if (meta.d.ETag !== SharePointSync._etag) {
+                console.log("Cambios detectados en el servidor. Recargando...");
+                await fullReload();
+            } else {
+                setSyncStatus('ok'); // Mantiene estado OK si no hay cambios
+            }
+        } else if (metaRes.status === 404 && SharePointSync._etag) {
+            // El fichero fue borrado en el servidor
+            await fullReload();
+        }
+    }, 30000); // Cada 30 segundos
+
+    // Filtros
+    $$('#filter-prof-adm, #filter-estado-adm, #filter-hora-desde-adm, #filter-hora-hasta-adm, #search-adm').forEach(el => el.addEventListener('input', renderAdmission));
+    $('#btn-limpiar-filtros-adm').addEventListener('click', () => { $('#filter-prof-adm').value = '__ALL__'; $('#filter-estado-adm').value = '__ALL__'; $('#filter-hora-desde-adm').value = ''; $('#filter-hora-hasta-adm').value = ''; $('#search-adm').value = ''; renderAdmission(); });
+    $$('#select-prof-pro, #filter-estado-pro, #filter-hora-desde-pro, #filter-hora-hasta-pro, #search-pro').forEach(el => el.addEventListener('input', renderProfessional));
+    $('#btn-limpiar-filtros-pro').addEventListener('click', () => { $('#filter-estado-pro').value = '__ALL__'; $('#filter-hora-desde-pro').value = ''; $('#filter-hora-hasta-pro').value = ''; $('#search-pro').value = ''; renderProfessional(); });
+    
+    // Carga de ficheros
+    $('#file-csv').addEventListener('change', async (e) => { const f = e.target.files[0]; if (!f) return; try { const text = await loadCSVFromFile(f); setAgendaFromText(text); } catch (err) { alert('No se pudo leer el CSV: ' + err.message); } finally { e.target.value = ''; } });
+    $('#btn-cargar-historico').addEventListener('click', async () => { const iso = $('#fecha').value || todayLocalISO(); app.dateISO = iso; await fullReload(); });
+    $('#file-estado').addEventListener('change', async (e) => { const f = e.target.files[0]; if (!f) return; try { const text = await f.text(); const obj = JSON.parse(text); if (typeof obj !== 'object' || Array.isArray(obj)) throw new Error('Formato inválido'); await pushUpdate(obj); } catch (err) { alert('No se pudo cargar el estado: ' + err.message); } finally { e.target.value = ''; } });
+    $('#btn-guardar-estado').addEventListener('click', () => { const ddmmyyyy = toDDMMYYYY(app.dateISO); download(`estado_${ddmmyyyy}.json`, new Blob([JSON.stringify(app.state, null, 2)], { type: 'application/json' })); });
+
+    // Controles principales
+    $('#fecha').addEventListener('change', async () => { app.dateISO = $('#fecha').value || todayLocalISO(); await fullReload(); });
+    $('#btn-sync-now').addEventListener('click', fullReload);
+    $('#btn-export-csv').addEventListener('click', exportCSV);
+    $('#btn-export-xls').addEventListener('click', exportExcelXML);
+    $('#go-adm').addEventListener('click', () => { showPanel('adm'); });
+    $('#go-pro').addEventListener('click', () => { showPanel('pro'); if(app.profesionales[0]){ $('#select-prof-pro').value = app.profesionales[0]; } renderProfessional(); });
+});
+</script>
+</body>
+</html>
